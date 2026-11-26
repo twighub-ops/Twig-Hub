@@ -591,6 +591,7 @@ form.orderForm{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:10
           <button class="btn outline" type="button" id="downloadOrderBtn">Download order details</button>
         </div>
         <p class="actionNote" id="actionNote" role="status"></p>
+        <p class="actionNote" id="customerEmailNote" role="status"></p>
         <p><strong>Please keep this for your records:</strong></p>
         <ul>
           <li>No payment is taken when you submit a request.</li>
@@ -651,6 +652,20 @@ form.orderForm{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:10
   </div>
 </footer>
 
+<script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+<script>
+/* EmailJS — free customer confirmation email, sent only AFTER the
+   Web3Forms order to Twig Hub has succeeded (see showSent in the
+   order-form handler below). Inited here with Jason's public key;
+   the send itself lives in the submit handler so it can never fire
+   before Web3Forms returns its success receipt. Guarded so a
+   blocked or failed SDK load never affects the order send itself. */
+try{
+  if(window.emailjs && emailjs.init){
+    emailjs.init({ publicKey: "7BDy20M6I_fy762AC" });
+  }
+}catch(e){}
+</script>
 <script>
 var data=[
 {"name":"Bauer ADV One","short":"ADV ONE","brand":"Bauer","category":"player","weight":"345 g · Senior (retailer-listed)","curves":["P92","P28"],"colors":["Black / lime"],"def":"#b8d929","description":"A low-kick profile designed for a quick, consistent release; the reference highlights raised-ink grip and a dark base with color accents.","price":267},
@@ -1225,6 +1240,8 @@ document.getElementById("orderForm").addEventListener("submit", function(e){
   document.getElementById("confirmSummary").textContent = lastOrderText;
   var box = document.getElementById("confirmBox");
   var note = document.getElementById("actionNote");
+  var customerEmailNote = document.getElementById("customerEmailNote");
+  if(customerEmailNote) customerEmailNote.textContent = "";
   var submitBtn = document.getElementById("submitBtn");
   var originalBtnText = submitBtn.textContent;
   submitBtn.disabled = true;
@@ -1305,6 +1322,41 @@ document.getElementById("orderForm").addEventListener("submit", function(e){
      produces no receipt is a failed send (showFailed), and the
      customer is told so plainly, with the email-app backup as the
      way to complete the order. */
+  /* Customer confirmation email via EmailJS — called ONLY from
+     showSent(), which itself runs only after Web3Forms returned its
+     {"success":true} receipt for the order to Twig Hub. It is never
+     called before that receipt, and never on the failure path. If
+     this send fails (or the SDK did not load), the order to Twig
+     Hub still stands exactly as confirmed on this page — only a
+     note in the confirmation panel says the customer email could
+     not be sent. Template params match the "Twig Hub Order
+     Confirmation" template: to_email / to_name / order_ref /
+     stick_model / order_summary (the same plain-text summary sent
+     to Twig Hub in the Web3Forms message). */
+  function sendCustomerConfirmation(){
+    var failMsg = "Your order has been sent to Twig Hub, but the confirmation email to " + email + " could not be sent — please keep this page’s summary below as your record, and quote reference " + orderRef + " if you ask about this order.";
+    if(customerEmailNote) customerEmailNote.textContent = "Sending your confirmation email to " + email + "…";
+    if(typeof emailjs === "undefined" || !emailjs || typeof emailjs.send !== "function"){
+      if(customerEmailNote) customerEmailNote.textContent = failMsg;
+      return;
+    }
+    try{
+      emailjs.send("service_da2n4hb", "template_a1mmjtn", {
+        to_email: email,
+        to_name: name,
+        order_ref: orderRef,
+        stick_model: p.name,
+        order_summary: lastOrderText
+      }).then(function(){
+        if(customerEmailNote) customerEmailNote.textContent = "A confirmation email has also been sent to " + email + " — look for “Twig Hub order received — " + orderRef + "” in your inbox, and check your spam or promotions folder if you don’t see it.";
+      }, function(){
+        if(customerEmailNote) customerEmailNote.textContent = failMsg;
+      });
+    }catch(ex){
+      if(customerEmailNote) customerEmailNote.textContent = failMsg;
+    }
+  }
+
   function showSent(){
     clearSlowTimer();
     submitBtn.disabled = false;
@@ -1317,6 +1369,7 @@ document.getElementById("orderForm").addEventListener("submit", function(e){
     box.classList.add("show");
     box.scrollIntoView({ behavior: "smooth", block: "start" });
     setTimeout(function(){ try{ box.focus({ preventScroll: true }); }catch(ex){} }, 600);
+    sendCustomerConfirmation();
   }
 
   /* There is deliberately NO "open the sending service in a new tab"
@@ -1344,6 +1397,7 @@ document.getElementById("orderForm").addEventListener("submit", function(e){
     document.getElementById("confirmIntro").textContent = "Sending straight from this page didn’t get through — this browser is blocking the connection to the sending service. Don’t retype anything: tap “Send via your email app” below. It opens already filled in and addressed to Twig Hub, with this exact order and reference " + orderRef + " in it — just press Send in your email app and Twig Hub has your order, with a copy in your Sent folder as your receipt. You can also copy or download your details for your records.";
     if(fallbackBtn) fallbackBtn.style.display = "";
     note.textContent = "";
+    if(customerEmailNote) customerEmailNote.textContent = "";
     box.classList.add("show");
     box.scrollIntoView({ behavior: "smooth", block: "start" });
     setTimeout(function(){ try{ box.focus({ preventScroll: true }); }catch(ex){} }, 600);
