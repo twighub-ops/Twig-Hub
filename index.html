@@ -258,6 +258,9 @@ form.orderForm{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:10
 .chatQuick{display:flex;flex-wrap:wrap;gap:6px;padding:10px 12px;border-top:1px solid var(--line);background:var(--card)}
 .chatQuick button{border:1.5px solid var(--line);background:var(--ice2);color:var(--ink);border-radius:99px;padding:7px 12px;font:600 13px Barlow,sans-serif;cursor:pointer;min-height:36px}
 .chatQuick button:hover{border-color:var(--cyan)}
+.chatFaqTopics{flex-direction:column;flex-wrap:nowrap;align-items:stretch;max-height:216px;overflow-y:auto}
+.chatFaqTopics[hidden]{display:none}
+.chatFaqTopics button{border-radius:12px;text-align:left;line-height:1.35}
 .chatInputRow{display:flex;gap:8px;padding:10px 12px;border-top:1px solid var(--line);background:var(--card)}
 .chatInputRow input{flex:1;min-width:0;border:1px solid var(--line);border-radius:10px;padding:10px 12px;font:inherit;font-size:15px;background:var(--input-bg);color:var(--ink)}
 .chatInputRow input:focus{outline:2px solid var(--cyan);outline-offset:1px}
@@ -696,7 +699,9 @@ form.orderForm{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:10
       <button type="button" data-q="How do I order?">How do I order?</button>
       <button type="button" data-q="Pickup or shipping?">Pickup or shipping?</button>
       <button type="button" data-q="Payment">Payment</button>
+      <button type="button" id="chatFaqBtn" aria-expanded="false" aria-controls="chatFaqTopics">FAQs</button>
     </div>
+    <div class="chatQuick chatFaqTopics" id="chatFaqTopics" hidden></div>
     <form class="chatInputRow" id="chatForm">
       <input id="chatInput" type="text" placeholder="Type your question…" autocomplete="off" aria-label="Type your question">
       <button class="btn cta chatSend" type="submit">Send</button>
@@ -1751,6 +1756,63 @@ draw();
     hours: "This chat is open 24/7 and answers right away, any time of day. If it can't answer something, it can take your name, email and question and send them to Twig Hub, who'll reply by email."
   };
 
+  /* ---------- FAQ knowledge base ----------
+     Read live from this page's own FAQ section (#faq) so the chat
+     answers with the FAQ's exact questions and answers. If that
+     section can't be read, the same wording is kept here as a
+     fallback copy. Matching runs inside answerFor AFTER the
+     non-stick guard, so questions about skates, helmets, pads and
+     other non-stick gear still go to Twig Hub via the fallback. */
+  var FAQS = [];
+  (function(){
+    var FALLBACK = [
+      { q: "Are these official Bauer or CCM sticks?", a: "No. They are unbranded Twig Hub supplier builds. Brand names identify the specification reference only; materials and construction may differ." },
+      { q: "How much do sticks cost?", a: "Player sticks are $264 CAD, the Bauer ADV One pre-order is $267 CAD, and goalie sticks are $317 CAD. These prices include the stick, inbound shipping and duty. Customer delivery shipping is extra and confirmed before payment." },
+      { q: "Do I pay when I submit the order form?", a: "No \u2014 no payment is taken when you submit a request. When your stick is confirmed for an upcoming bulk order, we\u2019ll send you an itemized invoice and estimated timeline. Payment is due before we place the supplier order." },
+      { q: "When will my stick arrive?", a: "Stick orders roughly take 2.5 weeks for build and shipping once the bulk order is placed. Requests are grouped \u2014 we have to have enough sticks to place an order, so that could delay it even further. We\u2019ll share an estimated timeline with your invoice, and confirm your specs and pickup or shipping details in writing." },
+      { q: "What if the bulk order is delayed or doesn\u2019t go ahead?", a: "If the bulk order is delayed or doesn\u2019t proceed by the stated date, you can choose a refund or to wait for the next order." },
+      { q: "Can I pick up in Winnipeg or have it shipped?", a: "Yes \u2014 Winnipeg pickup and shipping are both available. Shipping is estimated for your destination and packed parcel, then confirmed before payment." },
+      { q: "How do I place an order or ask a question?", a: "Use the order form above \u2014 it sends your request straight to Twig Hub, and you can add any question in the notes field." }
+    ];
+    try{
+      var items = document.querySelectorAll("#faq details");
+      for(var i = 0; i < items.length; i++){
+        var s = items[i].querySelector("summary");
+        var p = items[i].querySelector("p");
+        if(s && p) FAQS.push({ q: s.textContent.replace(/\s+/g, " ").trim(), a: p.textContent.replace(/\s+/g, " ").trim() });
+      }
+    }catch(e){}
+    if(FAQS.length < 3) FAQS = FALLBACK;
+  })();
+
+  function faqByQuestion(part){
+    for(var i = 0; i < FAQS.length; i++){
+      if(FAQS[i].q.toLowerCase().indexOf(part) > -1) return FAQS[i];
+    }
+    return null;
+  }
+  /* Match a typed question to an FAQ entry so the chat answers from
+     the FAQ wording wherever an FAQ applies: bulk orders, refunds and
+     waiting, official/branded, prices, timing, pickup/shipping,
+     payment, and how to order. Anything unmatched falls through to
+     the catalogue answers below, then to the email fallback. */
+  function faqMatch(q){
+    var has = function(s){ return q.indexOf(s) > -1; };
+    var f;
+    if(has("refund") || has("money back") || has("delay") || has("doesn't proceed") || has("doesn\u2019t proceed") || has("go ahead") || has("wait for the next")){ f = faqByQuestion("delayed"); if(f) return f; }
+    if(has("official") || has("genuine") || has("authentic") || has("real bauer") || has("real ccm") || has("unbranded")){ f = faqByQuestion("official"); if(f) return f; }
+    if(has("bulk order")){ f = faqByQuestion("arrive"); if(f) return f; }
+    if(has("price") || has("cost") || has("how much")){ f = faqByQuestion("cost"); if(f) return f; }
+    if(has("how long") || has("when will") || has("arrive") || has("lead time") || has("timeline") || has("how fast") || has("2.5 week") || has("two weeks") || has("take?")){ f = faqByQuestion("arrive"); if(f) return f; }
+    if(has("pickup") || has("pick up") || has("deliver") || has("shipping") || has("ship")){ f = faqByQuestion("pick up"); if(f) return f; }
+    if(has("do i pay") || has("pay when") || has("payment") || has("pay")){ f = faqByQuestion("pay"); if(f) return f; }
+    if(has("how do i order") || has("how to order") || has("place an order") || has("order form") || has("ask a question")){ f = faqByQuestion("place an order"); if(f) return f; }
+    return null;
+  }
+
+  var faqTopics = document.getElementById("chatFaqTopics");
+  var faqBtn = document.getElementById("chatFaqBtn");
+
   function answerFor(raw){
     var q = " " + raw.toLowerCase().replace(/\s+/g, " ") + " ";
     /* Twig Hub only sells sticks. If a question mentions any other
@@ -1765,6 +1827,8 @@ draw();
       return "Hi! I can help with prices, the 17 stick models, sizes, hand, flex, curves and colours, how ordering works, timelines, pickup or shipping, and payment. What would you like to know?";
     }
     if(q.indexOf("thank") > -1) return "You're welcome! Anything else I can help with — prices, models, or how to order?";
+    var faqHit = faqMatch(q);
+    if(faqHit) return faqHit.a;
     if(q.indexOf("price") > -1 || q.indexOf("cost") > -1 || q.indexOf("how much") > -1) return ANSWERS.prices;
     if(q.indexOf("how long") > -1 || q.indexOf("when will") > -1 || q.indexOf("arrive") > -1 || q.indexOf("lead time") > -1 || q.indexOf("timeline") > -1 || q.indexOf("how fast") > -1 || q.indexOf("2.5 week") > -1 || q.indexOf("two weeks") > -1 || q.indexOf("take?") > -1) return ANSWERS.timeline;
     if(q.indexOf("pickup") > -1 || q.indexOf("pick up") > -1 || q.indexOf("deliver") > -1 || q.indexOf("shipping") > -1 || q.indexOf("ship") > -1) return ANSWERS.fulfillment;
@@ -1873,6 +1937,7 @@ draw();
 
   function handleUserText(text){
     addMsg(text, "user");
+    hideFaqTopics();
     if(flow){ handleFlow(text); return; }
     var ans = answerFor(text);
     if(ans){ botSay(ans); return; }
@@ -1895,6 +1960,46 @@ draw();
         handleUserText(this.getAttribute("data-q"));
       });
     }
+  }
+
+  /* ---------- FAQs quick reply ----------
+     Tapping "FAQs" lists the FAQ section's exact questions; tapping
+     one shows that question and its exact FAQ answer. */
+  function showFaqTopics(){
+    if(!faqTopics) return;
+    if(!faqTopics.children.length){
+      FAQS.forEach(function(f){
+        var b = document.createElement("button");
+        b.type = "button";
+        b.textContent = f.q;
+        b.addEventListener("click", function(){
+          hideFaqTopics();
+          flow = null;
+          addMsg(f.q, "user");
+          botSay(f.a);
+        });
+        faqTopics.appendChild(b);
+      });
+    }
+    faqTopics.hidden = false;
+    if(faqBtn) faqBtn.setAttribute("aria-expanded", "true");
+  }
+  function hideFaqTopics(){
+    if(faqTopics && !faqTopics.hidden){
+      faqTopics.hidden = true;
+      if(faqBtn) faqBtn.setAttribute("aria-expanded", "false");
+    }
+  }
+  if(faqBtn && faqTopics){
+    faqBtn.addEventListener("click", function(){
+      flow = null;
+      if(faqTopics.hidden){
+        showFaqTopics();
+        botSay("Here are the questions from this page\u2019s FAQ \u2014 tap one and I\u2019ll give you its answer:");
+      } else {
+        hideFaqTopics();
+      }
+    });
   }
 })();
 </script>
