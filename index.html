@@ -261,6 +261,7 @@ form.orderForm{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:10
 .chatFaqTopics{flex-direction:column;flex-wrap:nowrap;align-items:stretch;max-height:216px;overflow-y:auto}
 .chatFaqTopics[hidden]{display:none}
 .chatFaqTopics button{border-radius:12px;text-align:left;line-height:1.35}
+.chatChoices[hidden]{display:none}
 .chatInputRow{display:flex;gap:8px;padding:10px 12px;border-top:1px solid var(--line);background:var(--card)}
 .chatInputRow input{flex:1;min-width:0;border:1px solid var(--line);border-radius:10px;padding:10px 12px;font:inherit;font-size:15px;background:var(--input-bg);color:var(--ink)}
 .chatInputRow input:focus{outline:2px solid var(--cyan);outline-offset:1px}
@@ -696,6 +697,7 @@ form.orderForm{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:10
     <div class="chatQuick" id="chatQuick">
       <button type="button" data-q="Prices">Prices</button>
       <button type="button" data-q="How do I pick my stick?">How do I pick my stick?</button>
+      <button type="button" id="chatFinderBtn">Find my stick for me</button>
       <button type="button" data-q="How long will it take?">How long will it take?</button>
       <button type="button" data-q="How do I order?">How do I order?</button>
       <button type="button" data-q="Pickup or shipping?">Pickup or shipping?</button>
@@ -703,6 +705,7 @@ form.orderForm{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:10
       <button type="button" id="chatFaqBtn" aria-expanded="false" aria-controls="chatFaqTopics">FAQs</button>
     </div>
     <div class="chatQuick chatFaqTopics" id="chatFaqTopics" hidden></div>
+    <div class="chatQuick chatChoices" id="chatChoices" hidden></div>
     <form class="chatInputRow" id="chatForm">
       <input id="chatInput" type="text" placeholder="Type your question…" autocomplete="off" aria-label="Type your question">
       <button class="btn cta chatSend" type="submit">Send</button>
@@ -1827,6 +1830,349 @@ draw();
     return GUIDE.kick;
   }
 
+  /* ---------- Guided stick finder ----------
+     "Find my stick for me" walks the customer through height,
+     weight, position, shot style and hand, one question at a time,
+     with tap-to-answer choices (they can also type an answer, and
+     type "cancel" any time to stop). The recommendation uses the
+     same fitting rules as the guide above — flex from half body
+     weight, chin-to-nose length and size category, kick point from
+     shot style, curve from the curve guide — and the sticks named
+     are matched against each model's own flex list (flexesFor) and
+     curve list in the catalogue data, so a model is only named for
+     a flex and curve it actually offers. If nothing matches the
+     recommended flex and curve exactly, it says so plainly and
+     names the closest matches instead. */
+  var finder = null;
+  var choicesEl = document.getElementById("chatChoices");
+
+  function hideChoices(){
+    if(choicesEl){ choicesEl.hidden = true; choicesEl.innerHTML = ""; }
+  }
+  function showChoices(list, onPick){
+    if(!choicesEl) return;
+    choicesEl.innerHTML = "";
+    list.forEach(function(c){
+      var b = document.createElement("button");
+      b.type = "button";
+      b.textContent = c.label;
+      b.addEventListener("click", function(){
+        hideChoices();
+        addMsg(c.label, "user");
+        onPick(c.value);
+      });
+      choicesEl.appendChild(b);
+    });
+    if(finder){
+      var cancelBtn = document.createElement("button");
+      cancelBtn.type = "button";
+      cancelBtn.textContent = "Cancel";
+      cancelBtn.addEventListener("click", function(){
+        hideChoices();
+        addMsg("Cancel", "user");
+        finder = null;
+        botSay("No problem — I've stopped the stick finder. What else can I help with?");
+      });
+      choicesEl.appendChild(cancelBtn);
+    }
+    choicesEl.hidden = false;
+  }
+  function botSayChoices(text, list, onPick){
+    setTimeout(function(){ addMsg(text, "bot"); showChoices(list, onPick); }, 320);
+  }
+  function choiceLabel(list, value){
+    for(var i = 0; i < list.length; i++){ if(list[i].value === value) return list[i].label; }
+    return value;
+  }
+  function modelByName(name){
+    for(var i = 0; i < data.length; i++){ if(data[i].name === name) return data[i]; }
+    return null;
+  }
+
+  var HEIGHT_CHOICES = [
+    { label: "Under 5'0\"", value: "57" },
+    { label: "5'0\"–5'4\"", value: "62" },
+    { label: "5'5\"–5'9\"", value: "67" },
+    { label: "5'10\"–6'2\"", value: "72" },
+    { label: "Over 6'2\"", value: "75" }
+  ];
+  var WEIGHT_CHOICES = [
+    { label: "Under 100 lb", value: "90" },
+    { label: "100–130 lb", value: "115" },
+    { label: "130–160 lb", value: "145" },
+    { label: "160–190 lb", value: "175" },
+    { label: "190–220 lb", value: "205" },
+    { label: "Over 220 lb", value: "235" }
+  ];
+
+  function startFinder(){
+    finder = { step: "height", heightIn: 0, heightLabel: "", weight: 0, weightLabel: "", weightApprox: false, position: "", shot: "", hand: "" };
+    hideFaqTopics();
+    botSayChoices("Let's find your stick — I'll ask a few quick questions, one at a time, then recommend Twig Hub sticks in your specs.\n\nFirst: how tall are you? Tap a range below, or type your height (for example 5'10\"). Type “cancel” any time to stop.", HEIGHT_CHOICES, pickHeight);
+  }
+  function pickHeight(v){ setHeight(parseInt(v, 10), choiceLabel(HEIGHT_CHOICES, v)); }
+  function setHeight(inches, label){
+    finder.heightIn = inches;
+    finder.heightLabel = label;
+    finder.step = "weight";
+    botSayChoices("Got it — " + label + ". Next: how much do you weigh? Tap a range below, or type your weight in pounds (for example 170).", WEIGHT_CHOICES, pickWeight);
+  }
+  function pickWeight(v){
+    finder.weightLabel = choiceLabel(WEIGHT_CHOICES, v);
+    finder.weightApprox = true;
+    setWeight(parseInt(v, 10));
+  }
+  function setWeight(lb){
+    finder.weight = lb;
+    finder.step = "position";
+    botSayChoices("Thanks. What position do you play?", [
+      { label: "Forward", value: "forward" },
+      { label: "Defence", value: "defence" },
+      { label: "Goalie", value: "goalie" }
+    ], setPosition);
+  }
+  function setPosition(v){
+    finder.position = v;
+    if(v === "goalie"){ askHand(); return; }
+    finder.step = "shot";
+    botSayChoices("How do you shoot most?", [
+      { label: "Quick snap / wrist shots in tight", value: "quick" },
+      { label: "Big slap shots / one-timers", value: "slap" },
+      { label: "A bit of both", value: "both" }
+    ], setShot);
+  }
+  function setShot(v){
+    finder.shot = v;
+    askHand();
+  }
+  function askHand(){
+    finder.step = "hand";
+    var opts = [
+      { label: "Left", value: "Left" },
+      { label: "Right", value: "Right" }
+    ];
+    if(finder.position === "goalie") opts.push({ label: "Full Right", value: "Full Right" });
+    botSayChoices("Last one: which hand do you play with?", opts, function(v){
+      finder.hand = v;
+      finishFinder();
+    });
+  }
+
+  function parseHeightInches(t){
+    var cm = t.match(/(\d{3})\s*cm/);
+    if(cm){
+      var ci = Math.round(parseInt(cm[1], 10) / 2.54);
+      if(ci >= 36 && ci <= 96) return ci;
+    }
+    var pairRe = /(\d)\s*['’]\s*(\d{1,2})/g, m, vals = [];
+    while((m = pairRe.exec(t)) !== null){ vals.push(parseInt(m[1], 10) * 12 + parseInt(m[2], 10)); }
+    if(vals.length){
+      var sum = 0;
+      vals.forEach(function(v){ sum += v; });
+      var avg = Math.round(sum / vals.length);
+      if(avg >= 36 && avg <= 96) return avg;
+    }
+    var ft = t.match(/(\d)\s*(?:ft|feet|foot)\s*(?:(\d{1,2})\s*(?:in|inch|inches)?)?/);
+    if(ft){
+      var fv = parseInt(ft[1], 10) * 12 + (ft[2] ? parseInt(ft[2], 10) : 0);
+      if(fv >= 36 && fv <= 96) return fv;
+    }
+    var bare = t.match(/(\d{2,3})/);
+    if(bare){
+      var bv = parseInt(bare[1], 10);
+      if(bv >= 36 && bv <= 96) return bv;
+    }
+    var feetOnly = t.match(/\b([4-7])\s*['’]/);
+    if(feetOnly) return parseInt(feetOnly[1], 10) * 12;
+    return null;
+  }
+  function parseWeightLb(t){
+    var kg = t.match(/(\d{2,3})\s*kg/);
+    if(kg){
+      var kw = Math.round(parseInt(kg[1], 10) * 2.205);
+      if(kw >= 40 && kw <= 400) return kw;
+    }
+    var m = t.match(/(\d{2,3})/);
+    if(m){
+      var w = parseInt(m[1], 10);
+      if(w >= 40 && w <= 400) return w;
+    }
+    return null;
+  }
+
+  function handleFinderText(text){
+    var t = " " + text.toLowerCase().replace(/\s+/g, " ") + " ";
+    if(t.indexOf(" cancel ") > -1 || t.indexOf(" stop ") > -1 || t.indexOf(" quit ") > -1){
+      finder = null;
+      hideChoices();
+      botSay("No problem — I've stopped the stick finder. What else can I help with?");
+      return;
+    }
+    if(finder.step === "height"){
+      var h = parseHeightInches(t);
+      if(h) setHeight(h, text);
+      else botSay("I didn't catch that height — tap one of the ranges below, or type it like 5'10\". Or type “cancel” to stop.");
+      return;
+    }
+    if(finder.step === "weight"){
+      var w = parseWeightLb(t);
+      if(w){ finder.weightLabel = w + " lb"; finder.weightApprox = false; setWeight(w); }
+      else botSay("I didn't catch that weight — tap one of the ranges below, or type it in pounds, like 170. Or type “cancel” to stop.");
+      return;
+    }
+    if(finder.step === "position"){
+      if(t.indexOf("goalie") > -1 || t.indexOf("goalkeeper") > -1 || t.indexOf("netminder") > -1) setPosition("goalie");
+      else if(t.indexOf("defen") > -1 || t.indexOf("d-man") > -1) setPosition("defence");
+      else if(t.indexOf("forward") > -1 || t.indexOf("wing") > -1 || t.indexOf("cent") > -1) setPosition("forward");
+      else botSay("Tap Forward, Defence or Goalie below — or type one. Or type “cancel” to stop.");
+      return;
+    }
+    if(finder.step === "shot"){
+      if(t.indexOf("slap") > -1 || t.indexOf("one-timer") > -1 || t.indexOf("one timer") > -1 || t.indexOf("power") > -1) setShot("slap");
+      else if(t.indexOf("both") > -1 || t.indexOf("mix") > -1 || t.indexOf("bit of") > -1) setShot("both");
+      else if(t.indexOf("snap") > -1 || t.indexOf("wrist") > -1 || t.indexOf("quick") > -1 || t.indexOf("tight") > -1) setShot("quick");
+      else botSay("Tap one of the shot styles below — quick snap/wrist shots in tight, big slap shots / one-timers, or a bit of both. Or type “cancel” to stop.");
+      return;
+    }
+    if(finder.step === "hand"){
+      if(finder.position === "goalie" && t.indexOf("full") > -1){ finder.hand = "Full Right"; finishFinder(); }
+      else if(t.indexOf("left") > -1){ finder.hand = "Left"; finishFinder(); }
+      else if(t.indexOf("right") > -1){ finder.hand = "Right"; finishFinder(); }
+      else botSay("Tap Left or Right below" + (finder.position === "goalie" ? " — goalies can also pick Full Right" : "") + " — or type it. Or type “cancel” to stop.");
+      return;
+    }
+  }
+
+  function nearestFlexFor(p, target){
+    var fs = flexesFor(p), best = null, bd = 1e9;
+    fs.forEach(function(s){
+      var f = parseInt(s, 10), d = Math.abs(f - target);
+      if(d < bd){ bd = d; best = f; }
+    });
+    return { flex: best, dist: bd };
+  }
+  /* P92 and P29 are the same curve family — Bauer models list P92,
+     CCM models list P29 — so either listing satisfies a P92 pick. */
+  function curveOffered(p, want){
+    if(want === "P92"){
+      if(p.curves.indexOf("P92") > -1) return "P92";
+      if(p.curves.indexOf("P29") > -1) return "P29";
+      return null;
+    }
+    return p.curves.indexOf(want) > -1 ? want : null;
+  }
+  function kickMatches(p, kick){
+    var d = (p.description || "").toLowerCase();
+    if(kick === "low") return d.indexOf("low-kick") > -1 || d.indexOf("low kick") > -1 || d.indexOf("quick-release") > -1 || d.indexOf("quick-loading") > -1;
+    if(kick === "mid") return d.indexOf("mid-kick") > -1 || d.indexOf("mid kick") > -1 || d.indexOf("hybrid kickpoint") > -1 || d.indexOf("fusion kickpoint") > -1 || d.indexOf("dual-zone") > -1;
+    return d.indexOf("high-kick") > -1 || d.indexOf("high kick") > -1;
+  }
+  function sizeCategoryFor(inches){
+    if(inches <= 54) return { name: "Youth", uncut: "45–49″" };
+    if(inches <= 62) return { name: "Junior", uncut: "50–54″" };
+    if(inches <= 69) return { name: "Intermediate", uncut: "55–58″" };
+    return { name: "Senior", uncut: "57–63″" };
+  }
+  function paddleFor(inches){
+    if(inches <= 59) return 23;
+    if(inches <= 64) return 24;
+    if(inches <= 69) return 25;
+    if(inches <= 74) return 26;
+    return 27;
+  }
+
+  function finishFinder(){
+    var f = finder;
+    finder = null;
+    hideChoices();
+    if(f.position === "goalie"){ goalieRecommendation(f); return; }
+    var base = Math.round(f.weight / 2);
+    var target = Math.max(40, base + (f.position === "forward" ? -5 : 5));
+    var kick, curve, curveAlt;
+    if(f.shot === "quick"){ kick = "low"; curve = "P28"; curveAlt = "P92"; }
+    else if(f.shot === "slap"){ kick = "high"; curve = "P92"; curveAlt = "P88"; }
+    else { kick = "mid"; curve = "P92"; curveAlt = "P90TM"; }
+    var kickText = {
+      low: "Low kick — it loads near the blade, so snap shots and wrist shots come off fastest in tight, with the quickest release.",
+      mid: "Mid kick — it loads in the middle of the shaft, for balanced power and release on slap shots and one-timers. The all-round pick, and a favourite for defencemen shooting from the point.",
+      high: "High kick — it loads near the top of the shaft, for maximum power on full slap shots, with a slower wind-up."
+    }[kick];
+    var curveText = {
+      P28: "P28 — the toe curve, built for quick release, toe drags and shooting in tight.",
+      P92: "P92/P29 — the all-round safest curve: easy to lift the puck, and good for shooting, passing and stickhandling. It's listed as P92 on Bauer models and P29 on CCM models.",
+      P88: "P88 — the mid curve for control, passing, accurate low shots and the strongest backhand.",
+      P90TM: "P90TM — the hybrid between P92 and P28, blending all-round feel with a quick toe release."
+    }[curve];
+    var cat = sizeCategoryFor(f.heightIn);
+    var lines = [];
+    lines.push("Here's your personal stick fit:");
+    lines.push("");
+    lines.push("• Flex: about " + target + ". The rule is half your body weight in pounds — for " + f.weightLabel + " that's about " + base + (f.weightApprox ? " (using the middle of that range)" : "") + " — then " + (f.position === "forward" ? "a touch lower for a forward's quicker release" : "a touch higher for a defenceman's power") + ". If you'll cut the stick down, remember cutting makes it stiffer — about 3–5 flex per inch you cut — so go a bit lower if you'll cut a lot.");
+    if(cat.name === "Intermediate" || cat.name === "Senior"){
+      lines.push("• Length & size: " + cat.name + ". In skates, the top of the shaft should reach between your chin and your nose (uncut " + cat.name + " sticks run about " + cat.uncut + "). Twig Hub player sticks come in Intermediate and Senior — pick " + cat.name + ".");
+    } else {
+      lines.push("• Length & size: by the standard size charts that's a " + cat.name + " fit — in skates, the top of the shaft should reach between your chin and your nose, and uncut " + cat.name + " sticks run about " + cat.uncut + ". Twig Hub player sticks start at Intermediate, so Intermediate is the closest size on the site.");
+    }
+    lines.push("• Kick point: " + kickText);
+    lines.push("• Curve: " + curveText);
+    lines.push("• Hand: " + f.hand);
+    var primary = [], alts = [];
+    data.forEach(function(p){
+      if(p.category !== "player") return;
+      var nf = nearestFlexFor(p, target);
+      var c = curveOffered(p, curve);
+      if(c) primary.push({ p: p, curve: c, flex: nf.flex, dist: nf.dist, kickOff: kickMatches(p, kick) ? 0 : 1 });
+      else {
+        var ca = curveOffered(p, curveAlt);
+        if(ca) alts.push({ p: p, curve: ca, flex: nf.flex, dist: nf.dist, kickOff: kickMatches(p, kick) ? 0 : 1 });
+      }
+    });
+    var byFit = function(a, b){ return (a.dist - b.dist) || (a.kickOff - b.kickOff); };
+    primary.sort(byFit);
+    alts.sort(byFit);
+    var picks = primary.slice(0, 3);
+    if(picks.length < 2) picks = picks.concat(alts.slice(0, 3 - picks.length));
+    var exact = picks.length > 0 && picks.every(function(c){ return primary.indexOf(c) > -1 && c.dist <= 5; });
+    lines.push("");
+    if(exact){
+      lines.push("Twig Hub sticks that offer that flex and curve:");
+    } else {
+      lines.push("No Twig Hub stick matches that flex and curve exactly — these are the closest matches:");
+    }
+    picks.forEach(function(c){
+      lines.push("• " + c.p.name + " — $" + c.p.price + " CAD — pick the " + c.flex + " flex · " + c.curve + " curve");
+    });
+    lines.push("");
+    lines.push("Tap a model name below (or type it) to see its full specs and colours, then pick those specs on its card, in the Stick Studio or on the order form — they'll fill the order form in automatically. No payment when you send the request.");
+    botSayChoices(lines.join("\n"), picks.map(function(c){ return { label: c.p.name, value: c.p.name }; }), function(name){
+      var p = modelByName(name);
+      if(p) botSay(modelAnswer(p));
+    });
+  }
+
+  function goalieRecommendation(f){
+    var paddle = paddleFor(f.heightIn);
+    var gs = [];
+    data.forEach(function(p){ if(p.category === "goalie") gs.push(p); });
+    var lines = [];
+    lines.push("Here's your goalie fit:");
+    lines.push("");
+    lines.push("• Paddle length: about " + paddle + "″. Goalie paddles run 23″ to 27″ and are sized off your height — at " + f.heightLabel + ", " + paddle + "″ is the standard pick.");
+    lines.push("• Curve: P31 — the goalie curve. All three Twig Hub goalie sticks come in P31.");
+    lines.push("• Hand: " + f.hand + ". Goalie sticks have no flex choice — you pick paddle size, hand and colour.");
+    lines.push("");
+    lines.push("All three Twig Hub goalie sticks match — $317 CAD each:");
+    gs.forEach(function(p){
+      lines.push("• " + p.name + " — $" + p.price + " CAD — pick the " + paddle + "″ paddle · P31 curve");
+    });
+    lines.push("");
+    lines.push("Tap a model name below (or type it) to see its colours and details, then pick those specs on its card or on the order form — they'll fill the order form in automatically. No payment when you send the request.");
+    botSayChoices(lines.join("\n"), gs.map(function(p){ return { label: p.name, value: p.name }; }), function(name){
+      var p = modelByName(name);
+      if(p) botSay(modelAnswer(p));
+    });
+  }
+
   /* ---------- FAQ knowledge base ----------
      Read live from this page's own FAQ section (#faq) so the chat
      answers with the FAQ's exact questions and answers. If that
@@ -2037,7 +2383,11 @@ draw();
   function handleUserText(text){
     addMsg(text, "user");
     hideFaqTopics();
+    hideChoices();
+    if(finder){ handleFinderText(text); return; }
     if(flow){ handleFlow(text); return; }
+    var lt = text.toLowerCase();
+    if(lt.indexOf("find my stick") > -1 || lt.indexOf("stick finder") > -1 || lt.indexOf("find a stick for me") > -1 || lt.indexOf("recommend me a stick") > -1 || lt.indexOf("recommend a stick") > -1){ startFinder(); return; }
     var ans = answerFor(text);
     if(ans){ botSay(ans); return; }
     flow = { step: "name", name: "", email: "", question: "" };
@@ -2056,9 +2406,19 @@ draw();
     for(var i = 0; i < qbtns.length; i++){
       qbtns[i].addEventListener("click", function(){
         flow = null;
+        finder = null;
         handleUserText(this.getAttribute("data-q"));
       });
     }
+  }
+  var finderBtn = document.getElementById("chatFinderBtn");
+  if(finderBtn){
+    finderBtn.addEventListener("click", function(){
+      flow = null;
+      hideChoices();
+      addMsg("Find my stick for me", "user");
+      startFinder();
+    });
   }
 
   /* ---------- FAQs quick reply ----------
@@ -2073,7 +2433,9 @@ draw();
         b.textContent = f.q;
         b.addEventListener("click", function(){
           hideFaqTopics();
+          hideChoices();
           flow = null;
+          finder = null;
           addMsg(f.q, "user");
           botSay(f.a);
         });
@@ -2092,6 +2454,8 @@ draw();
   if(faqBtn && faqTopics){
     faqBtn.addEventListener("click", function(){
       flow = null;
+      finder = null;
+      hideChoices();
       if(faqTopics.hidden){
         showFaqTopics();
         botSay("Here are the questions from this page\u2019s FAQ \u2014 tap one and I\u2019ll give you its answer:");
