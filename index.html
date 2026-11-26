@@ -699,6 +699,7 @@ form.orderForm{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:10
       <button type="button" data-q="How do I order?">How do I order?</button>
       <button type="button" data-q="Pickup or shipping?">Pickup or shipping?</button>
       <button type="button" data-q="Payment">Payment</button>
+      <button type="button" data-q="How do I pick my stick?">How do I pick my stick?</button>
       <button type="button" id="chatFaqBtn" aria-expanded="false" aria-controls="chatFaqTopics">FAQs</button>
     </div>
     <div class="chatQuick chatFaqTopics" id="chatFaqTopics" hidden></div>
@@ -1690,7 +1691,7 @@ draw();
     bubble.setAttribute("aria-expanded", "true");
     if(!greeted){
       greeted = true;
-      botSay("Hi, and welcome to Twig Hub! I can answer questions about prices, the 17 stick models, sizes, hand, flex, curves and colours, how ordering works, how long things take, pickup or shipping, and payment. What would you like to know?");
+      botSay("Hi, and welcome to Twig Hub! I can answer questions about prices, the 17 stick models, sizes, hand, flex, curves and colours, how ordering works, how long things take, pickup or shipping, and payment. I can also help you pick your stick — flex, length, kick point and curve. What would you like to know?");
     }
     setTimeout(function(){ try{ input.focus({ preventScroll: true }); }catch(e){} }, 60);
   }
@@ -1714,12 +1715,14 @@ draw();
       "Curves: " + p.curves.join(" / "),
       "Colours: " + p.colors.join(", ")
     ];
+    if(p.description) lines.push("Profile: " + p.description);
     if(p.category === "goalie"){
       lines.push("Sizes: 23″, 24″, 25″, 26″ or 27″ paddle · Hand: Left, Right or Full Right");
     } else {
       lines.push("Sizes: Intermediate or Senior · Hand: Left or Right · Flex: " + flexesFor(p).join(", "));
     }
-    lines.push("Pick it on its card or in the Stick Studio and your choices fill the order form in automatically — no payment when you send the request.");
+    lines.push("Those are this model's own available flex, curve and colour options — pick those specs on its card, in the Stick Studio or on the order form, and your choices fill the order form in automatically. No payment when you send the request.");
+    if(p.category !== "goalie") lines.push("Not sure which flex, length, kick point or curve fits you? Ask me about any of them and I'll walk through the fitting guide.");
     return lines.join("\n");
   }
   function modelsAnswer(){
@@ -1755,6 +1758,41 @@ draw();
     unbranded: "Twig Hub sticks are unbranded supplier builds matched to a Bauer or CCM specification reference — the brand name tells you the specs and feel the build is matched to, but the stick itself carries only the Twig Hub name, with a plain blade like a real stick. Materials and construction may differ from the retail reference model.",
     hours: "This chat is open 24/7 and answers right away, any time of day. If it can't answer something, it can take your name, email and question and send them to Twig Hub, who'll reply by email."
   };
+
+  /* ---------- Stick-fitting guide ----------
+     Standard hockey sizing guidance so customers can customise
+     their sticks properly: flex, stick length, kick point and
+     curves. General guidance only — when a question names a
+     specific model, answerFor returns that model's own catalogue
+     options first (see modelAnswer), not these general ranges. */
+  var GUIDE = {
+    guide: "How to pick your stick — the short guide:\n\n1. Flex — start at about half your body weight in pounds (youth 20-30, junior 30-50, intermediate 50-70, senior 75-85 typical, 85-110 for heavier or stronger adults). Cutting a stick shorter adds about 3-5 flex per inch, so buy a lower flex if you plan to cut it.\n2. Length — in skates the top of the shaft should reach between chin and nose (about nose height without skates). Uncut: senior 57-63 inches, intermediate 55-58, junior 50-54, youth 45-49.\n3. Kick point — low kick loads near the blade for the fastest release on snap and wrist shots (best for forwards in tight); mid kick loads in the middle for balanced power and release on slap shots and one-timers (best all-round, and for defensemen at the point); high kick loads near the top for maximum power on full slap shots, with a slower wind-up.\n4. Curve — P92/P29 is the all-round safest first curve, P28 is the toe curve for quick release, toe drags and shooting in tight (weakest backhand), P88 is the mid curve with a neutral face for control and the strongest backhand, P90TM is a hybrid between P92 and P28, and P31 is the goalie curve.\n\nWant to go one at a time? Just ask me about flex, length, kick point or curve — or type a model name and I'll show you that model's exact flex, curve and colour options to pick on the order form.",
+    flex: "Flex guide\n\nFlex is the pounds of force it takes to bend the shaft one inch — a higher number is stiffer, a lower number is whippier and easier to load.\n\nStart at about half your body weight in pounds. For example, 150 lb is about a 75 flex, and 180 lb is about a 90 flex.\n\nTypical ranges:\n• Youth: 20-30 flex\n• Junior: 30-50 flex\n• Intermediate: 50-70 flex\n• Senior: 75-85 flex is typical, and 85-110 flex for heavier or stronger adults\n\nBy position: forwards often go a bit lower for a quicker release, and defensemen often go a bit higher for power.\n\nCutting matters: cutting a stick shorter makes it feel stiffer — it adds about 3-5 flex per inch you cut off, so buy a lower flex if you plan to cut it.\n\nOn Twig Hub the flex you can pick depends on the model — Bauer references offer 55, 65, 70, 77, 87, 102 and CCM references offer 55, 65, 70, 75, 85, 95, 105 (goalie sticks have no flex choice). Pick your flex on the stick's card, in the Stick Studio or on the order form. Type a model name and I'll list its exact flex options.",
+    length: "Stick length guide\n\nIn your skates, the top of the shaft should reach between your chin and your nose. Without skates, aim for about nose height.\n\nTypical uncut lengths:\n• Senior: 57-63 inches\n• Intermediate: 55-58 inches\n• Junior: 50-54 inches\n• Youth: 45-49 inches\n\nBy position: forwards often prefer a little shorter for control and quicker handling, and defensemen often prefer a little longer for reach.\n\nRemember, cutting a stick shorter also makes it feel stiffer — about 3-5 flex per inch cut off (ask me about flex for more on that).\n\nOn Twig Hub, player sticks come in Intermediate or Senior size and goalie sticks in 23\u2033 to 27\u2033 paddle. Pick your size on the stick's card, in the Stick Studio or on the order form.",
+    kick: "Kick point guide\n\nThe kick point is where the shaft loads and bends most when you shoot:\n\n• Low kick — loads near the blade, for the fastest release on snap shots and wrist shots. Best for forwards shooting in tight and getting the puck off quickly.\n• Mid kick — loads in the middle of the shaft, for balanced power and release on slap shots and one-timers. Best all-round, and a favourite for defensemen shooting from the point.\n• High kick — loads near the top of the shaft, for maximum power on full slap shots, but with a slower wind-up.\n\nEach Twig Hub model's kick profile is noted in its description — type a model name and I'll tell you its profile plus its exact flex, curve and colour options, then pick that model and your specs on the order form.",
+    curve: "Curve guide\n\n• P92 / P29 — mid-toe curve with an open face. The all-round safest first curve: easy to lift the puck, and good for shooting, passing and stickhandling. If you're not sure, start here.\n• P28 — a toe curve, very open at the toe. Built for quick release, toe drags and shooting in tight. It has the weakest backhand of these options.\n• P88 — a mid curve with a more neutral face. Best for control, passing, accurate low shots and the strongest backhand. A good pick for defensemen.\n• P90TM — a hybrid between P92 and P28, blending the all-round P92 feel with the P28 toe release.\n• P31 — the goalie curve, on the goalie sticks.\n\nAvailability depends on the model — many player sticks offer P92, P28 and P88, some also offer P90TM, and CCM models use P29 in place of P92. Type a model name and I'll list its exact curves, then pick your curve on its card, in the Stick Studio or on the order form."
+  };
+  function flexAnswer(q){
+    var m = q.match(/(\d{2,3})\s*(lbs|pounds|lb)\b/);
+    if(m){
+      var w = parseInt(m[1], 10);
+      if(w >= 40 && w <= 400){
+        var half = Math.round(w / 2);
+        return "For " + w + " lb, half your body weight is about " + half + " — so start around a " + half + " flex, then adjust: a bit lower for a quicker release (common for forwards), a bit higher for power (common for defensemen), and lower again if you plan to cut the stick.\n\n" + GUIDE.flex;
+      }
+    }
+    return GUIDE.flex;
+  }
+  function curveAnswer(q){
+    var focus = null;
+    if(q.indexOf("p90tm") > -1) focus = "P90TM is a hybrid between P92 and P28 — it blends the all-round mid-toe feel of the P92 with the open toe and quick release of the P28.";
+    else if(q.indexOf("p31") > -1) focus = "P31 is the goalie curve — it's the curve on Twig Hub's goalie sticks.";
+    else if(q.indexOf("p28") > -1 && q.indexOf("p92") === -1 && q.indexOf("p29") === -1 && q.indexOf("p88") === -1) focus = "P28 is a toe curve, very open at the toe — built for quick release, toe drags and shooting in tight, with the weakest backhand of the common curves.";
+    else if(q.indexOf("p88") > -1 && q.indexOf("p92") === -1 && q.indexOf("p29") === -1 && q.indexOf("p28") === -1) focus = "P88 is a mid curve with a more neutral face — best for control, passing, accurate low shots and the strongest backhand, and a good pick for defensemen.";
+    else if((q.indexOf("p92") > -1 || q.indexOf("p29") > -1) && q.indexOf("p28") === -1 && q.indexOf("p88") === -1 && q.indexOf("p90") === -1) focus = "P92 (called P29 on CCM models) is a mid-toe curve with an open face — the all-round safest first curve, easy to lift the puck and good for shooting, passing and stickhandling.";
+    if(focus) return focus + "\n\nHere is the full curve guide:\n\n" + GUIDE.curve;
+    return GUIDE.curve;
+  }
 
   /* ---------- FAQ knowledge base ----------
      Read live from this page's own FAQ section (#faq) so the chat
@@ -1824,9 +1862,34 @@ draw();
       return null;
     }
     if(/^\s*(hi|hello|hey|good morning|good afternoon|good evening)\b/.test(raw.toLowerCase()) && raw.length < 30){
-      return "Hi! I can help with prices, the 17 stick models, sizes, hand, flex, curves and colours, how ordering works, timelines, pickup or shipping, and payment. What would you like to know?";
+      return "Hi! I can help with prices, the 17 stick models, sizes, hand, flex, curves and colours, how ordering works, timelines, pickup or shipping, and payment. I can also help you pick your stick — flex, length, kick point and curve. What would you like to know?";
     }
     if(q.indexOf("thank") > -1) return "You're welcome! Anything else I can help with — prices, models, or how to order?";
+    /* ---------- Stick-fitting guide ----------
+       Checked before the FAQ match so fitting questions aren't
+       swallowed by FAQ keywords (e.g. "how long should my stick
+       be?" is a length question, not a delivery-time question,
+       and "how much flex?" is not a price question). A question
+       naming a specific model together with a spec word still
+       gets that model's own catalogue options first. */
+    var foundEarly = findModels(raw.toLowerCase());
+    var hasSpecWord = (q.indexOf("flex") > -1 || q.indexOf("curve") > -1 || q.indexOf("colour") > -1 || q.indexOf("color") > -1 || q.indexOf("kick") > -1 || q.indexOf("length") > -1 || q.indexOf("size") > -1 || q.indexOf("hand") > -1 || q.indexOf("option") > -1 || q.indexOf("spec") > -1 || q.indexOf("weight") > -1 || q.indexOf("p92") > -1 || q.indexOf("p29") > -1 || q.indexOf("p28") > -1 || q.indexOf("p88") > -1 || q.indexOf("p90") > -1 || q.indexOf("p31") > -1);
+    if(foundEarly.length === 1 && hasSpecWord) return modelAnswer(foundEarly[0]);
+    if(foundEarly.length > 1 && hasSpecWord){
+      return "A few models match that:\n• " + foundEarly.map(function(p){ return p.name + " — $" + p.price + " CAD"; }).join("\n• ") + "\n\nType the full model name and I'll give you its exact flex, curve and colour options to pick on the order form.";
+    }
+    var isPickGuide = (q.indexOf("how do i pick my stick") > -1 || q.indexOf("how to pick my stick") > -1 || q.indexOf("pick my stick") > -1 || q.indexOf("how do i pick a stick") > -1 || q.indexOf("how to pick a stick") > -1 || q.indexOf("pick a stick") > -1 || q.indexOf("how do i choose a stick") > -1 || q.indexOf("how to choose a stick") > -1 || q.indexOf("choose my stick") > -1 || q.indexOf("how do i choose my stick") > -1 || q.indexOf("which stick should") > -1 || q.indexOf("what stick should") > -1 || q.indexOf("help me pick") > -1 || q.indexOf("help me choose") > -1 || q.indexOf("stick fitting") > -1 || q.indexOf("fitting guide") > -1 || q.indexOf("size guide") > -1 || q.indexOf("sizing guide") > -1 || q.indexOf("customize my stick") > -1 || q.indexOf("customise my stick") > -1 || q.indexOf("customize their stick") > -1 || q.indexOf("customise their stick") > -1 || q.indexOf("customize a stick") > -1 || q.indexOf("customise a stick") > -1);
+    if(isPickGuide) return GUIDE.guide;
+    var topicFlex = (q.indexOf("flex") > -1 || q.indexOf("stiffness") > -1 || q.indexOf("whippy") > -1 || q.indexOf("bend the shaft") > -1 || q.indexOf("pounds of force") > -1);
+    var topicKick = (q.indexOf("kick point") > -1 || q.indexOf("kickpoint") > -1 || q.indexOf("low kick") > -1 || q.indexOf("mid kick") > -1 || q.indexOf("high kick") > -1 || q.indexOf(" kick ") > -1);
+    var topicCurve = (q.indexOf("curve") > -1 || q.indexOf("blade pattern") > -1 || q.indexOf("p92") > -1 || q.indexOf("p29") > -1 || q.indexOf("p28") > -1 || q.indexOf("p88") > -1 || q.indexOf("p90tm") > -1 || q.indexOf("p31") > -1);
+    var topicLength = (q.indexOf("length") > -1 || q.indexOf("how long should") > -1 || q.indexOf("how tall should") > -1 || q.indexOf("uncut") > -1 || (q.indexOf("how long") > -1 && q.indexOf("stick") > -1) || (q.indexOf("what size stick") > -1) || (q.indexOf("which size stick") > -1) || (q.indexOf("cut") > -1 && (q.indexOf("stick") > -1 || q.indexOf("shorter") > -1 || q.indexOf("flex") > -1)));
+    var topicCount = (topicFlex ? 1 : 0) + (topicKick ? 1 : 0) + (topicCurve ? 1 : 0) + (topicLength ? 1 : 0);
+    if(topicCount >= 2) return GUIDE.guide;
+    if(topicKick) return GUIDE.kick;
+    if(topicCurve) return curveAnswer(q);
+    if(topicFlex) return flexAnswer(q);
+    if(topicLength) return GUIDE.length;
     var faqHit = faqMatch(q);
     if(faqHit) return faqHit.a;
     if(q.indexOf("price") > -1 || q.indexOf("cost") > -1 || q.indexOf("how much") > -1) return ANSWERS.prices;
