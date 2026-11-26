@@ -1753,6 +1753,14 @@ draw();
 
   function answerFor(raw){
     var q = " " + raw.toLowerCase().replace(/\s+/g, " ") + " ";
+    /* Twig Hub only sells sticks. If a question mentions any other
+       hockey product — skates, helmets, pads, gloves, bags, tape,
+       pucks or any other non-stick gear — don't match a stick keyword
+       (e.g. "goalie" in "goalie skates"); return null so it goes to
+       the fallback and is sent to Twig Hub instead. */
+    if(/\b(skates?|skating|ice skates?|roller skates?|helmets?|pads?|padding|gloves?|bags?|tape|pucks?|jerseys?|visors?|face shields?|shields?|cages?|masks?|blockers?|catchers?|chest protectors?|protectors?|shoulder pads?|elbow pads?|shin guards?|shin pads?|knee pads?|neck guards?|mouth ?guards?|guards?|hockey pants|breezers|pants|jocks?|jockstraps?|socks?|laces?|skate laces?|wax|stick wax|sharpening|skate sharpening|runners?|holders?|skate boots?|apparel|clothing|hoodies?|shirts?|shorts?|suspenders|garter|equipment|hockey gear|goalie gear|goalie equipment)\b/.test(q)){
+      return null;
+    }
     if(/^\s*(hi|hello|hey|good morning|good afternoon|good evening)\b/.test(raw.toLowerCase()) && raw.length < 30){
       return "Hi! I can help with prices, the 17 stick models, sizes, hand, flex, curves and colours, how ordering works, timelines, pickup or shipping, and payment. What would you like to know?";
     }
@@ -1772,7 +1780,7 @@ draw();
     }
     if(q.indexOf("bauer") > -1) return brandAnswer("Bauer");
     if(q.indexOf("ccm") > -1) return brandAnswer("CCM");
-    if(q.indexOf("goalie") > -1){
+    if(q.indexOf("goalie") > -1 && (q.indexOf("stick") > -1 || q.indexOf("twig") > -1 || q.indexOf("paddle") > -1)){
       var g = [];
       data.forEach(function(p){ if(p.category === "goalie") g.push(p.name + " — $" + p.price); });
       return "The goalie sticks are $317 CAD each:\n• " + g.join("\n• ") + "\n\nGoalie sizes run 23″ to 27″ paddle, hand Left, Right or Full Right, curve P31. Type a model name for its colours.";
