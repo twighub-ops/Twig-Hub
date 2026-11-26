@@ -239,6 +239,34 @@ form.orderForm{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:10
 .foot small{color:#9db8c6}
 .tiny{font-size:12.5px;color:var(--muted);line-height:1.6}
 
+/* ---------- Chat with Twig Hub (built-in, 24/7) ---------- */
+.chatWidget{position:fixed;right:18px;bottom:18px;z-index:90;display:flex;flex-direction:column;align-items:flex-end;gap:12px}
+.chatBubble{display:inline-flex;align-items:center;gap:9px;border:0;border-radius:99px;background:var(--navy);color:#fff;padding:13px 20px;font:700 15px Barlow,sans-serif;cursor:pointer;box-shadow:0 10px 28px rgba(8,20,29,.35)}
+.chatBubble:hover{background:var(--navy2)}
+.chatBubble svg{flex:none}
+.chatPanel{width:min(372px,calc(100vw - 32px));height:min(580px,calc(100dvh - 116px));display:flex;flex-direction:column;background:var(--card);border:1px solid var(--line);border-radius:18px;overflow:hidden;box-shadow:0 24px 60px rgba(8,20,29,.32)}
+.chatPanel[hidden]{display:none}
+.chatHead{background:var(--navy);color:#fff;padding:13px 16px;display:flex;justify-content:space-between;align-items:center;gap:10px}
+.chatHead strong{display:block;font-size:16.5px;line-height:1.2}
+.chatHead span{display:flex;align-items:center;gap:6px;font-size:12.5px;color:#bcd4e0;margin-top:2px}
+.chatDot{width:8px;height:8px;border-radius:50%;background:#3ec978;flex:none}
+.chatClose{background:transparent;border:0;color:#fff;font-size:24px;line-height:1;cursor:pointer;padding:4px 8px;min-height:36px}
+.chatMsgs{flex:1;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:8px;background:var(--ice2)}
+.chatMsg{max-width:86%;padding:9px 13px;border-radius:14px;font-size:14px;line-height:1.55;white-space:pre-wrap;overflow-wrap:break-word}
+.chatMsg.bot{background:var(--card);border:1px solid var(--line);align-self:flex-start;border-bottom-left-radius:4px}
+.chatMsg.user{background:var(--navy);color:#fff;align-self:flex-end;border-bottom-right-radius:4px}
+.chatQuick{display:flex;flex-wrap:wrap;gap:6px;padding:10px 12px;border-top:1px solid var(--line);background:var(--card)}
+.chatQuick button{border:1.5px solid var(--line);background:var(--ice2);color:var(--ink);border-radius:99px;padding:7px 12px;font:600 13px Barlow,sans-serif;cursor:pointer;min-height:36px}
+.chatQuick button:hover{border-color:var(--cyan)}
+.chatInputRow{display:flex;gap:8px;padding:10px 12px;border-top:1px solid var(--line);background:var(--card)}
+.chatInputRow input{flex:1;min-width:0;border:1px solid var(--line);border-radius:10px;padding:10px 12px;font:inherit;font-size:15px;background:var(--input-bg);color:var(--ink)}
+.chatInputRow input:focus{outline:2px solid var(--cyan);outline-offset:1px}
+.chatSend{padding:10px 18px;flex:none}
+@media(max-width:600px){
+  .chatWidget{right:12px;bottom:12px}
+  .chatPanel{height:min(580px,calc(100dvh - 104px))}
+}
+
 @media(max-width:900px){
   .heroGrid,.how{grid-template-columns:1fr}
   .heroStage{height:400px}.heroStick{height:362px}
@@ -651,6 +679,34 @@ form.orderForm{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:10
     <small>© <span id="year"></span> Twig Hub</small>
   </div>
 </footer>
+
+<div class="chatWidget">
+  <div class="chatPanel" id="chatPanel" role="dialog" aria-label="Chat with Twig Hub" hidden>
+    <div class="chatHead">
+      <div>
+        <strong>Chat with Twig Hub</strong>
+        <span><i class="chatDot"></i> Open 24/7 · answers right away</span>
+      </div>
+      <button class="chatClose" id="chatClose" type="button" aria-label="Close chat">×</button>
+    </div>
+    <div class="chatMsgs" id="chatMsgs" aria-live="polite"></div>
+    <div class="chatQuick" id="chatQuick">
+      <button type="button" data-q="Prices">Prices</button>
+      <button type="button" data-q="How long will it take?">How long will it take?</button>
+      <button type="button" data-q="How do I order?">How do I order?</button>
+      <button type="button" data-q="Pickup or shipping?">Pickup or shipping?</button>
+      <button type="button" data-q="Payment">Payment</button>
+    </div>
+    <form class="chatInputRow" id="chatForm">
+      <input id="chatInput" type="text" placeholder="Type your question…" autocomplete="off" aria-label="Type your question">
+      <button class="btn cta chatSend" type="submit">Send</button>
+    </form>
+  </div>
+  <button class="chatBubble" id="chatBubble" type="button" aria-expanded="false" aria-controls="chatPanel">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M21 11.5a8.5 8.5 0 0 1-8.5 8.5c-1.5 0-3-.4-4.2-1.1L3 20l1.1-5.3A8.5 8.5 0 1 1 21 11.5Z" fill="#fff" opacity=".95"/><circle cx="8.6" cy="11.5" r="1.3" fill="#0d1f2d"/><circle cx="12.5" cy="11.5" r="1.3" fill="#0d1f2d"/><circle cx="16.4" cy="11.5" r="1.3" fill="#0d1f2d"/></svg>
+    <span>Chat with Twig Hub</span>
+  </button>
+</div>
 
 <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
 <script>
@@ -1587,6 +1643,252 @@ document.getElementById("year").textContent = new Date().getFullYear();
 })();
 
 draw();
+</script>
+<script>
+/* ---------- Chat with Twig Hub — built-in, free, open 24/7 ----------
+   Answers the common questions itself from the same catalogue data
+   (the `data` array above) and the terms already stated on this page.
+   When it can't answer, it collects the customer's name, email and
+   question and sends them to Twig Hub through the same Web3Forms
+   send the order form uses (same access key, same inbox), with a
+   subject starting "Twig Hub chat question". It only tells the
+   customer the question was sent when Web3Forms' own success
+   receipt comes back — the same rule the order form follows. */
+(function(){
+  var bubble = document.getElementById("chatBubble");
+  var panel = document.getElementById("chatPanel");
+  var closeBtn = document.getElementById("chatClose");
+  var msgs = document.getElementById("chatMsgs");
+  var form = document.getElementById("chatForm");
+  var input = document.getElementById("chatInput");
+  var quick = document.getElementById("chatQuick");
+  if(!bubble || !panel || !msgs || !form || !input) return;
+
+  var greeted = false;
+  var flow = null; /* { step:"name"|"email"|"question", name:"", email:"" } */
+
+  function addMsg(text, who){
+    var d = document.createElement("div");
+    d.className = "chatMsg " + who;
+    d.textContent = text;
+    msgs.appendChild(d);
+    msgs.scrollTop = msgs.scrollHeight;
+    return d;
+  }
+  function botSay(text){
+    /* A short pause so replies feel like a chat, not a page reload. */
+    setTimeout(function(){ addMsg(text, "bot"); }, 320);
+  }
+
+  function openChat(){
+    panel.hidden = false;
+    bubble.setAttribute("aria-expanded", "true");
+    if(!greeted){
+      greeted = true;
+      botSay("Hi, and welcome to Twig Hub! I can answer questions about prices, the 17 stick models, sizes, hand, flex, curves and colours, how ordering works, how long things take, pickup or shipping, and payment. What would you like to know?");
+    }
+    setTimeout(function(){ try{ input.focus({ preventScroll: true }); }catch(e){} }, 60);
+  }
+  function closeChat(){
+    panel.hidden = true;
+    bubble.setAttribute("aria-expanded", "false");
+  }
+  bubble.addEventListener("click", function(){
+    if(panel.hidden) openChat(); else closeChat();
+  });
+  closeBtn.addEventListener("click", closeChat);
+  document.addEventListener("keydown", function(e){
+    if(e.key === "Escape" && !panel.hidden) closeChat();
+  });
+
+  /* ---------- Answers, all from the site's own information ---------- */
+  function modelAnswer(p){
+    var lines = [
+      p.name + " — $" + p.price + " CAD (" + (p.category === "goalie" ? "goalie stick" : "player stick") + ")",
+      "Reference weight: " + p.weight,
+      "Curves: " + p.curves.join(" / "),
+      "Colours: " + p.colors.join(", ")
+    ];
+    if(p.category === "goalie"){
+      lines.push("Sizes: 23″, 24″, 25″, 26″ or 27″ paddle · Hand: Left, Right or Full Right");
+    } else {
+      lines.push("Sizes: Intermediate or Senior · Hand: Left or Right · Flex: " + flexesFor(p).join(", "));
+    }
+    lines.push("Pick it on its card or in the Stick Studio and your choices fill the order form in automatically — no payment when you send the request.");
+    return lines.join("\n");
+  }
+  function modelsAnswer(){
+    var players = [], goalies = [];
+    data.forEach(function(p){
+      (p.category === "goalie" ? goalies : players).push(p.name + " — $" + p.price);
+    });
+    return "We have 17 models — 14 player sticks and 3 goalie sticks:\n\nPlayer sticks:\n• " + players.join("\n• ") + "\n\nGoalie sticks:\n• " + goalies.join("\n• ") + "\n\nType any model name and I'll give you its curves, colours, sizes and flex options.";
+  }
+  function brandAnswer(brand){
+    var list = [];
+    data.forEach(function(p){ if(p.brand === brand) list.push(p.name + " — $" + p.price); });
+    return "The " + brand + " reference models are:\n• " + list.join("\n• ") + "\n\nType a model name for its curves, colours and options.";
+  }
+  function findModels(q){
+    var matches = [];
+    data.forEach(function(p){
+      var full = p.name.toLowerCase();
+      var noBrand = full.replace(/^(bauer|ccm)\s+/, "");
+      if(q.indexOf(full) > -1 || (noBrand.length >= 5 && q.indexOf(noBrand) > -1)) matches.push(p);
+    });
+    return matches;
+  }
+
+  var ANSWERS = {
+    prices: "Player sticks are $264 CAD, the Bauer ADV One is $267 CAD, and goalie sticks are $317 CAD. Prices include the stick, inbound supplier shipping and duty. Delivery shipping is extra and confirmed before payment.",
+    timeline: "Once a bulk order is placed, build and shipping take about 2.5 weeks. Requests are gathered into bulk orders first, so if enough sticks still need to be gathered, it can take longer than that. Twig Hub sends an estimated timeline with your invoice and confirms it in writing.",
+    fulfillment: "Both are available. Winnipeg pickup is available locally, with the details confirmed in writing. Shipping is extra — it's estimated for your destination and confirmed before payment, so there are no surprises. Stick prices already include the stick, inbound supplier shipping and duty.",
+    payment: "No payment is taken when you submit an order request. When your stick is confirmed for an upcoming bulk order, Twig Hub sends you an itemized invoice and an estimated timeline, and payment is due before the supplier order is placed. If the bulk order is delayed or doesn't proceed by the stated date, you can choose a refund or to wait for the next order.",
+    order: "Ordering is done with the order form on this page:\n1. Pick your model, size, hand, flex, curve and colour on a stick card or in the Stick Studio — your picks fill the order form in automatically.\n2. Add your name and email, and choose Winnipeg pickup or shipping.\n3. Tap “Send order request” — no payment is taken.\nYou'll get an order reference code on screen and a confirmation email, and Twig Hub takes it from there.",
+    confirmation: "When you send an order request, you get an order reference code on screen (it looks like TH-XXXXXX), and Twig Hub also sends a confirmation email to the email address you gave, with your stick and the same reference code in it. Quote that code if you ask about your order and Twig Hub can find it right away.",
+    options: "Every stick lets you pick:\n• Size — Intermediate or Senior for player sticks; 23″ to 27″ paddle for goalie sticks\n• Hand — Left, Right, or Full Right (goalie)\n• Flex — 55 to 102 on Bauer references, 55 to 105 on CCM references (goalie sticks have no flex choice)\n• Curve — depends on the model, for example P92, P28, P88 or P90TM on player sticks, and P31 on goalie sticks\n• Colour — each model has its own colourways\n\nType a model name and I'll list its exact curves and colours.",
+    unbranded: "Twig Hub sticks are unbranded supplier builds matched to a Bauer or CCM specification reference — the brand name tells you the specs and feel the build is matched to, but the stick itself carries only the Twig Hub name, with a plain blade like a real stick. Materials and construction may differ from the retail reference model.",
+    hours: "This chat is open 24/7 and answers right away, any time of day. If it can't answer something, it can take your name, email and question and send them to Twig Hub, who'll reply by email."
+  };
+
+  function answerFor(raw){
+    var q = " " + raw.toLowerCase().replace(/\s+/g, " ") + " ";
+    if(/^\s*(hi|hello|hey|good morning|good afternoon|good evening)\b/.test(raw.toLowerCase()) && raw.length < 30){
+      return "Hi! I can help with prices, the 17 stick models, sizes, hand, flex, curves and colours, how ordering works, timelines, pickup or shipping, and payment. What would you like to know?";
+    }
+    if(q.indexOf("thank") > -1) return "You're welcome! Anything else I can help with — prices, models, or how to order?";
+    if(q.indexOf("price") > -1 || q.indexOf("cost") > -1 || q.indexOf("how much") > -1) return ANSWERS.prices;
+    if(q.indexOf("how long") > -1 || q.indexOf("when will") > -1 || q.indexOf("arrive") > -1 || q.indexOf("lead time") > -1 || q.indexOf("timeline") > -1 || q.indexOf("how fast") > -1 || q.indexOf("2.5 week") > -1 || q.indexOf("two weeks") > -1 || q.indexOf("take?") > -1) return ANSWERS.timeline;
+    if(q.indexOf("pickup") > -1 || q.indexOf("pick up") > -1 || q.indexOf("deliver") > -1 || q.indexOf("shipping") > -1 || q.indexOf("ship") > -1) return ANSWERS.fulfillment;
+    if(q.indexOf("reference") > -1 || q.indexOf("ref code") > -1 || q.indexOf("confirmation") > -1 || q.indexOf("confirm my order") > -1) return ANSWERS.confirmation;
+    if(q.indexOf("refund") > -1 || q.indexOf("delay") > -1 || q.indexOf("money back") > -1 || q.indexOf("doesn't proceed") > -1 || q.indexOf("doesnt proceed") > -1) return ANSWERS.payment;
+    if(q.indexOf("pay") > -1 || q.indexOf("invoice") > -1 || q.indexOf("e-transfer") > -1 || q.indexOf("etransfer") > -1 || q.indexOf("credit card") > -1 || q.indexOf("deposit") > -1) return ANSWERS.payment;
+    if(q.indexOf("official") > -1 || q.indexOf("genuine") > -1 || q.indexOf("authentic") > -1 || q.indexOf("real bauer") > -1 || q.indexOf("real ccm") > -1 || q.indexOf("unbranded") > -1 || q.indexOf("brand") > -1) return ANSWERS.unbranded;
+    if(q.indexOf("how do i order") > -1 || q.indexOf("order") > -1 || q.indexOf("buy") > -1 || q.indexOf("purchase") > -1) return ANSWERS.order;
+    var found = findModels(raw.toLowerCase());
+    if(found.length === 1) return modelAnswer(found[0]);
+    if(found.length > 1){
+      return "A few models match that:\n• " + found.map(function(p){ return p.name + " — $" + p.price + " CAD"; }).join("\n• ") + "\n\nType the full model name and I'll give you its curves, colours, sizes and flex options.";
+    }
+    if(q.indexOf("bauer") > -1) return brandAnswer("Bauer");
+    if(q.indexOf("ccm") > -1) return brandAnswer("CCM");
+    if(q.indexOf("goalie") > -1){
+      var g = [];
+      data.forEach(function(p){ if(p.category === "goalie") g.push(p.name + " — $" + p.price); });
+      return "The goalie sticks are $317 CAD each:\n• " + g.join("\n• ") + "\n\nGoalie sizes run 23″ to 27″ paddle, hand Left, Right or Full Right, curve P31. Type a model name for its colours.";
+    }
+    if(q.indexOf("size") > -1 || q.indexOf("flex") > -1 || q.indexOf("curve") > -1 || q.indexOf("colour") > -1 || q.indexOf("color") > -1 || q.indexOf("hand") > -1 || q.indexOf("option") > -1 || q.indexOf("spec") > -1) return ANSWERS.options;
+    if(q.indexOf("model") > -1 || q.indexOf("which stick") > -1 || q.indexOf("what stick") > -1 || q.indexOf("catalog") > -1 || q.indexOf("range") > -1) return modelsAnswer();
+    if(q.indexOf("hour") > -1 || q.indexOf("open") > -1 || q.indexOf("24/7") > -1 || q.indexOf("available") > -1) return ANSWERS.hours;
+    return null;
+  }
+
+  /* ---------- Sending a question the chat can't answer ----------
+     Same Web3Forms endpoint and access key as the order form; the
+     subject starts with "Twig Hub chat question" so chat questions
+     are easy to tell apart from orders in the inbox. */
+  function sendChatQuestion(done){
+    var fd = new FormData();
+    fd.append("access_key", "11c9a48f-f397-40c3-a057-c3d0f3a35ac0");
+    fd.append("subject", "Twig Hub chat question — " + flow.name);
+    fd.append("from_name", "Twig Hub Website Chat");
+    fd.append("replyto", flow.email);
+    fd.append("name", flow.name);
+    fd.append("email", flow.email);
+    fd.append("question", flow.question);
+    fd.append("message", "Question from the Twig Hub website chat\n--------------------------\nName: " + flow.name + "\nEmail: " + flow.email + "\n\nQuestion:\n" + flow.question);
+    var settled = false;
+    var ctrl = null, timer = null;
+    try{
+      if(window.AbortController){
+        ctrl = new AbortController();
+        timer = setTimeout(function(){ try{ ctrl.abort(); }catch(e){} }, 20000);
+      }
+    }catch(e){}
+    function finish(ok){
+      if(settled) return; settled = true;
+      if(timer) clearTimeout(timer);
+      done(ok);
+    }
+    fetch("https://api.web3forms.com/submit", {
+      method: "POST",
+      mode: "cors",
+      credentials: "omit",
+      headers: { "Accept": "application/json" },
+      body: fd,
+      signal: ctrl ? ctrl.signal : undefined
+    }).then(function(res){
+      return res.text().then(function(txt){
+        var parsed = null;
+        try{ parsed = JSON.parse(txt); }catch(e){}
+        finish(!!(res.ok && parsed && (parsed.success === true || parsed.success === "true")));
+      }, function(){ finish(false); });
+    }).catch(function(){ finish(false); });
+  }
+
+  function handleFlow(text){
+    if(text.toLowerCase() === "cancel"){
+      flow = null;
+      botSay("No problem — I've cancelled that. What else can I help with?");
+      return;
+    }
+    if(flow.step === "name"){
+      flow.name = text;
+      flow.step = "email";
+      botSay("Thanks, " + text + ". What's the best email address for Twig Hub to reply to?");
+      return;
+    }
+    if(flow.step === "email"){
+      if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(text)){
+        botSay("That email doesn't look quite right — could you check it and type it again? Or type “cancel” to stop.");
+        return;
+      }
+      flow.email = text;
+      flow.step = "question";
+      botSay("And what's your question for Twig Hub?");
+      return;
+    }
+    if(flow.step === "question"){
+      flow.question = text;
+      var name = flow.name, email = flow.email;
+      botSay("Sending your question to Twig Hub now…");
+      sendChatQuestion(function(ok){
+        flow = null;
+        if(ok){
+          botSay("Sent — thanks, " + name + ". Your question is on its way to Twig Hub, and they'll reply by email at " + email + ". Anything else I can help with in the meantime?");
+        } else {
+          botSay("Sorry — I couldn't send that just now. You can also put your question in the “Anything else?” notes field of the order form on this page and Twig Hub will get it there, or try this chat again in a moment.");
+        }
+      });
+    }
+  }
+
+  function handleUserText(text){
+    addMsg(text, "user");
+    if(flow){ handleFlow(text); return; }
+    var ans = answerFor(text);
+    if(ans){ botSay(ans); return; }
+    flow = { step: "name", name: "", email: "", question: "" };
+    botSay("I don't have an answer for that one in what I know about Twig Hub — but I can send your question to Twig Hub and they'll reply by email. What's your name? (Type “cancel” any time to stop.)");
+  }
+
+  form.addEventListener("submit", function(e){
+    e.preventDefault();
+    var text = input.value.trim();
+    if(!text) return;
+    input.value = "";
+    handleUserText(text);
+  });
+  if(quick){
+    var qbtns = quick.querySelectorAll("button[data-q]");
+    for(var i = 0; i < qbtns.length; i++){
+      qbtns[i].addEventListener("click", function(){
+        flow = null;
+        handleUserText(this.getAttribute("data-q"));
+      });
+    }
+  }
+})();
 </script>
 </body>
 </html>
