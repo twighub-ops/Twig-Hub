@@ -251,11 +251,11 @@ form.orderForm{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:10
 .chatHead span{display:flex;align-items:center;gap:6px;font-size:12.5px;color:#bcd4e0;margin-top:2px}
 .chatDot{width:8px;height:8px;border-radius:50%;background:#3ec978;flex:none}
 .chatClose{background:transparent;border:0;color:#fff;font-size:24px;line-height:1;cursor:pointer;padding:4px 8px;min-height:36px}
-.chatMsgs{flex:1;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:8px;background:var(--ice2)}
+.chatMsgs{flex:1;min-height:0;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:8px;background:var(--ice2)}
 .chatMsg{max-width:86%;padding:9px 13px;border-radius:14px;font-size:14px;line-height:1.55;white-space:pre-wrap;overflow-wrap:break-word}
 .chatMsg.bot{background:var(--card);border:1px solid var(--line);align-self:flex-start;border-bottom-left-radius:4px}
 .chatMsg.user{background:var(--navy);color:#fff;align-self:flex-end;border-bottom-right-radius:4px}
-.chatQuick{display:flex;flex-wrap:wrap;gap:6px;padding:10px 12px;border-top:1px solid var(--line);background:var(--card)}
+.chatQuick{display:flex;flex-wrap:wrap;flex:none;overflow:visible;gap:6px;padding:10px 12px;border-top:1px solid var(--line);background:var(--card)}
 .chatQuick button{border:1.5px solid var(--line);background:var(--ice2);color:var(--ink);border-radius:99px;padding:7px 12px;font:600 13px Barlow,sans-serif;cursor:pointer;min-height:36px}
 .chatQuick button:hover{border-color:var(--cyan)}
 .chatFaqTopics{flex-direction:column;flex-wrap:nowrap;align-items:stretch;max-height:216px;overflow-y:auto}
@@ -695,11 +695,11 @@ form.orderForm{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:10
     <div class="chatMsgs" id="chatMsgs" aria-live="polite"></div>
     <div class="chatQuick" id="chatQuick">
       <button type="button" data-q="Prices">Prices</button>
+      <button type="button" data-q="How do I pick my stick?">How do I pick my stick?</button>
       <button type="button" data-q="How long will it take?">How long will it take?</button>
       <button type="button" data-q="How do I order?">How do I order?</button>
       <button type="button" data-q="Pickup or shipping?">Pickup or shipping?</button>
       <button type="button" data-q="Payment">Payment</button>
-      <button type="button" data-q="How do I pick my stick?">How do I pick my stick?</button>
       <button type="button" id="chatFaqBtn" aria-expanded="false" aria-controls="chatFaqTopics">FAQs</button>
     </div>
     <div class="chatQuick chatFaqTopics" id="chatFaqTopics" hidden></div>
@@ -1773,17 +1773,36 @@ draw();
     curve: "Curve guide\n\n• P92 / P29 — mid-toe curve with an open face. The all-round safest first curve: easy to lift the puck, and good for shooting, passing and stickhandling. If you're not sure, start here.\n• P28 — a toe curve, very open at the toe. Built for quick release, toe drags and shooting in tight. It has the weakest backhand of these options.\n• P88 — a mid curve with a more neutral face. Best for control, passing, accurate low shots and the strongest backhand. A good pick for defensemen.\n• P90TM — a hybrid between P92 and P28, blending the all-round P92 feel with the P28 toe release.\n• P31 — the goalie curve, on the goalie sticks.\n\nAvailability depends on the model — many player sticks offer P92, P28 and P88, some also offer P90TM, and CCM models use P29 in place of P92. Type a model name and I'll list its exact curves, then pick your curve on its card, in the Stick Studio or on the order form."
   };
   function flexAnswer(q){
-    var m = q.match(/(\d{2,3})\s*(lbs|pounds|lb)\b/);
+    var m = q.match(/(\d{2,3})\s*(lbs?|pounds?)\b/);
     if(m){
       var w = parseInt(m[1], 10);
       if(w >= 40 && w <= 400){
         var half = Math.round(w / 2);
-        return "For " + w + " lb, half your body weight is about " + half + " — so start around a " + half + " flex, then adjust: a bit lower for a quicker release (common for forwards), a bit higher for power (common for defensemen), and lower again if you plan to cut the stick.\n\n" + GUIDE.flex;
+        var art = ((half >= 80 && half <= 89) || half === 11 || half === 18) ? "an" : "a";
+        return "For " + w + " lb, half your body weight is about " + half + " — so start around " + art + " " + half + " flex, then adjust: a bit lower for a quicker release (common for forwards), a bit higher for power (common for defensemen), and lower again if you plan to cut the stick.\n\n" + GUIDE.flex;
       }
     }
     return GUIDE.flex;
   }
   function curveAnswer(q){
+    /* Two or more curves named (e.g. "P28 vs P88", "difference
+       between P28 and P88") gets a head-to-head comparison first,
+       then the full curve guide below it. */
+    var has28 = q.indexOf("p28") > -1, has88 = q.indexOf("p88") > -1,
+        has92 = q.indexOf("p92") > -1 || q.indexOf("p29") > -1,
+        has90 = q.indexOf("p90tm") > -1, has31 = q.indexOf("p31") > -1;
+    var named = (has28 ? 1 : 0) + (has88 ? 1 : 0) + (has92 ? 1 : 0) + (has90 ? 1 : 0) + (has31 ? 1 : 0);
+    if(named >= 2){
+      var bits = [];
+      if(has92) bits.push("P92/P29 is the mid-toe all-rounder with an open face — easy to lift the puck, and good for shooting, passing and stickhandling");
+      if(has28) bits.push("P28 is a toe curve, very open at the toe — built for quick release, toe drags and shooting in tight, with the weakest backhand of these curves");
+      if(has88) bits.push("P88 is a mid curve with a more neutral face — best for control, passing and accurate low shots, with the strongest backhand of these curves");
+      if(has90) bits.push("P90TM is a hybrid between P92 and P28, blending the P92's all-round feel with the P28's open toe and quick release");
+      if(has31) bits.push("P31 is the goalie curve, on the goalie sticks");
+      var cmp = "Head to head: " + bits.join("; ") + ".";
+      if(has28 && has88) cmp = "P28 vs P88 — the short version: pick the P28 for quick release and toe drags, pick the P88 for control, passing and your backhand.\n\n" + cmp;
+      return cmp + "\n\nHere is the full curve guide:\n\n" + GUIDE.curve;
+    }
     var focus = null;
     if(q.indexOf("p90tm") > -1) focus = "P90TM is a hybrid between P92 and P28 — it blends the all-round mid-toe feel of the P92 with the open toe and quick release of the P28.";
     else if(q.indexOf("p31") > -1) focus = "P31 is the goalie curve — it's the curve on Twig Hub's goalie sticks.";
@@ -1792,6 +1811,20 @@ draw();
     else if((q.indexOf("p92") > -1 || q.indexOf("p29") > -1) && q.indexOf("p28") === -1 && q.indexOf("p88") === -1 && q.indexOf("p90") === -1) focus = "P92 (called P29 on CCM models) is a mid-toe curve with an open face — the all-round safest first curve, easy to lift the puck and good for shooting, passing and stickhandling.";
     if(focus) return focus + "\n\nHere is the full curve guide:\n\n" + GUIDE.curve;
     return GUIDE.curve;
+  }
+  /* Kick point questions get a direct recommendation first when
+     they name a position or a shot type, then the full guide. */
+  function kickAnswer(q){
+    var lead = null;
+    if(/\b(forwards?|wingers?|centres?|centers?)\b/.test(q)){
+      lead = "For a forward, go low kick — it loads near the blade, so snap shots and wrist shots come off fastest in tight, with the quickest release.";
+    } else if(/\b(defensemen|defenseman|defencemen|defenceman|defense|defence|d-man)\b/.test(q)){
+      lead = "For a defenseman, mid kick is the usual pick — it loads in the middle of the shaft, for balanced power and release on slap shots and one-timers from the point. If you mostly take big wind-up slap shots and want maximum power, that's high kick.";
+    } else if(q.indexOf("slap shot") > -1 || q.indexOf("slapshot") > -1 || q.indexOf("one-timer") > -1 || q.indexOf("one timer") > -1 || q.indexOf("power") > -1){
+      lead = "For maximum power on full slap shots, that's high kick — it loads near the top of the shaft, with a slower wind-up. For slap shots and one-timers with a quicker release, mid kick is the balanced all-round pick.";
+    }
+    if(lead) return lead + "\n\n" + GUIDE.kick;
+    return GUIDE.kick;
   }
 
   /* ---------- FAQ knowledge base ----------
@@ -1866,10 +1899,13 @@ draw();
     }
     if(q.indexOf("thank") > -1) return "You're welcome! Anything else I can help with — prices, models, or how to order?";
     /* ---------- Stick-fitting guide ----------
-       Checked before the FAQ match so fitting questions aren't
-       swallowed by FAQ keywords (e.g. "how long should my stick
-       be?" is a length question, not a delivery-time question,
-       and "how much flex?" is not a price question). A question
+       Checked before the FAQ match AND before the generic
+       size/flex/curve options reply (ANSWERS.options) at the tail
+       of this function, so fitting questions aren't swallowed by
+       FAQ keywords or the generic spec list (e.g. "how long
+       should my stick be?" is a length question, not a
+       delivery-time question, and "how much flex?" is not a
+       price question). A question
        naming a specific model together with a spec word still
        gets that model's own catalogue options first. */
     var foundEarly = findModels(raw.toLowerCase());
@@ -1886,7 +1922,7 @@ draw();
     var topicLength = (q.indexOf("length") > -1 || q.indexOf("how long should") > -1 || q.indexOf("how tall should") > -1 || q.indexOf("uncut") > -1 || (q.indexOf("how long") > -1 && q.indexOf("stick") > -1) || (q.indexOf("what size stick") > -1) || (q.indexOf("which size stick") > -1) || (q.indexOf("cut") > -1 && (q.indexOf("stick") > -1 || q.indexOf("shorter") > -1 || q.indexOf("flex") > -1)));
     var topicCount = (topicFlex ? 1 : 0) + (topicKick ? 1 : 0) + (topicCurve ? 1 : 0) + (topicLength ? 1 : 0);
     if(topicCount >= 2) return GUIDE.guide;
-    if(topicKick) return GUIDE.kick;
+    if(topicKick) return kickAnswer(q);
     if(topicCurve) return curveAnswer(q);
     if(topicFlex) return flexAnswer(q);
     if(topicLength) return GUIDE.length;
